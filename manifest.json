@@ -1,0 +1,40 @@
+{
+  "version": "0.1.0",
+  "minNode": ">=18",
+  "requiredMcp": [
+    "context7",
+    "github",
+    "playwright",
+    "chrome-devtools",
+    "design-systems"
+  ],
+  "optionalMcp": [
+    "vercel",
+    "sentry",
+    "postman",
+    "cloudflare-docs",
+    "cloudflare-api",
+    "astro",
+    "astryx",
+    "Framelink_Figma_MCP",
+    "MCP_DOCKER",
+    "nova-memory",
+    "postiz"
+  ],
+  "requiredSkills": [
+    "loop-adapter",
+    "loop-engine"
+  ],
+  "requiredCommands": {
+    "opencode": "opencode"
+  },
+  "envVars": [
+    { "key": "context7.authorization", "placeholder": "YOUR_CONTEXT7_API_KEY", "server": "context7" },
+    { "key": "github.authorization", "placeholder": "YOUR_GITHUB_PAT", "server": "github" },
+    { "key": "postiz.authorization", "placeholder": "YOUR_POSTIZ_API_KEY", "server": "postiz" },
+    { "key": "Framelink_Figma_MCP.apiKey", "placeholder": "YOUR_FIGMA_API_KEY", "server": "Framelink_Figma_MCP" }
+  ],
+  "installPaths": {
+    "configRoot": "%USERPROFILE%\\.config\\opencode"
+  }
+}

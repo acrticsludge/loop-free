@@ -1,0 +1,184 @@
+{
+  "$schema": "https://opencode.ai/config.json",
+  "providers": {
+    "tokenharbor": {
+      "package": "aisdk:@ai-sdk/openai-compatible",
+      "settings": {
+        "baseURL": "https://tokenharbor.ai/v1"
+      },
+      "models": {
+        "deepseek-v4.1-flash:free": { "name": "DeepSeek V4.1 Flash (Free)" },
+        "claude-haiku-5.5:free": { "name": "Claude Haiku 5.5 (Limited Free)" },
+        "deepseek-v4.1-flash": { "name": "DeepSeek V4.1 Flash" },
+        "claude-haiku-5.5": { "name": "Claude Haiku 5.5" }
+      }
+    }
+  },
+  "provider": {
+    "opencode": {
+      "options": { "baseURL": "https://opencode.ai/zen/v1" }
+    },
+    "opencode-go": {
+      "options": { "baseURL": "https://opencode.ai/zen/go/v1" }
+    }
+  },
+  "mcp": {
+    "servers": {
+      "astro": {
+        "type": "remote",
+        "url": "https://mcp.docs.astro.build/mcp"
+      },
+      "astryx": {
+        "type": "remote",
+        "url": "https://astryx.atmeta.com/mcp"
+      },
+      "context7": {
+        "type": "remote",
+        "url": "https://mcp.context7.com/mcp",
+        "oauth": false,
+        "headers": {
+          "Authorization": "Bearer YOUR_CONTEXT7_API_KEY"
+        }
+      },
+      "nova-memory": {
+        "type": "local",
+        "command": ["npx", "-y", "--ignore-scripts", "@nova-mcp/mcp-nova@1.0.3"],
+        "environment": {
+          "NODE_PATH": "C:\\Users\\anubh\\AppData\\Roaming\\npm\\node_modules"
+        }
+      },
+      "cloudflare-docs": {
+        "type": "remote",
+        "url": "https://docs.mcp.cloudflare.com/mcp"
+      },
+      "cloudflare-api": {
+        "type": "remote",
+        "url": "https://mcp.cloudflare.com/mcp"
+      },
+      "postiz": {
+        "type": "remote",
+        "url": "http://localhost:4007/api/mcp",
+        "oauth": false,
+        "headers": {
+          "Authorization": "Bearer YOUR_POSTIZ_API_KEY"
+        }
+      },
+      "playwright": {
+        "type": "local",
+        "command": [
+          "npx",
+          "@playwright/mcp@latest"
+        ]
+      },
+      "Framelink_Figma_MCP": {
+        "type": "local",
+        "command": [
+          "npx",
+          "-y",
+          "figma-developer-mcp",
+          "--figma-api-key=YOUR_FIGMA_API_KEY",
+          "--stdio"
+        ]
+      },
+      "github": {
+        "type": "remote",
+        "url": "https://api.githubcopilot.com/mcp/",
+        "enabled": true,
+        "oauth": false,
+        "headers": {
+          "Authorization": "Bearer YOUR_GITHUB_PAT"
+        }
+      },
+      "vercel": {
+        "type": "remote",
+        "url": "https://mcp.vercel.com"
+      },
+      "chrome-devtools": {
+        "type": "local",
+        "command": [
+          "npx",
+          "chrome-devtools-mcp@latest"
+        ]
+      },
+      "postman": {
+        "type": "remote",
+        "url": "https://mcp.postman.com/mcp"
+      },
+      "MCP_DOCKER": {
+        "type": "local",
+        "command": [
+          "docker",
+          "mcp",
+          "gateway",
+          "run",
+          "--profile",
+          "ai_coding"
+        ],
+        "enabled": true
+      },
+      "sentry": {
+        "type": "remote",
+        "url": "https://mcp.sentry.dev/mcp"
+      },
+      "design-systems": {
+        "type": "local",
+        "command": [
+          "npx",
+          "-y",
+          "website-design-systems-mcp"
+        ]
+      }
+    }
+  },
+  "plugins": [
+    { "package": "{{CONFIG_DIR}}/tui-plugins/tok-speed" },
+    { "package": "{{CONFIG_DIR}}/tui-plugins/loop-models" }
+  ],
+  "permissions": [
+    { "action": "read", "resource": "*", "effect": "allow" },
+    { "action": "glob", "resource": "*", "effect": "allow" },
+    { "action": "grep", "resource": "*", "effect": "allow" },
+    { "action": "webfetch", "resource": "*", "effect": "allow" },
+    { "action": "websearch", "resource": "*", "effect": "allow" },
+    { "action": "edit", "resource": "*", "effect": "allow" },
+    { "action": "external_directory", "resource": "*", "effect": "allow" },
+    { "action": "shell", "resource": "*", "effect": "allow" },
+    { "action": "shell", "resource": "git push*", "effect": "deny" },
+    { "action": "shell", "resource": "git push --force*", "effect": "deny" },
+    { "action": "shell", "resource": "git reset --hard*", "effect": "deny" },
+    { "action": "shell", "resource": "git clean*", "effect": "deny" },
+    { "action": "shell", "resource": "git checkout -- *", "effect": "deny" },
+    { "action": "shell", "resource": "git restore --staged*", "effect": "deny" },
+    { "action": "shell", "resource": "git restore --worktree*", "effect": "deny" },
+    { "action": "shell", "resource": "git branch -D*", "effect": "deny" },
+    { "action": "shell", "resource": "git commit*--no-verify*", "effect": "deny" },
+    { "action": "shell", "resource": "rm -rf /*", "effect": "deny" },
+    { "action": "shell", "resource": "rm -fr /*", "effect": "deny" },
+    { "action": "shell", "resource": "drop table*", "effect": "deny" },
+    { "action": "shell", "resource": "drop database*", "effect": "deny" },
+    { "action": "shell", "resource": "drop schema*", "effect": "deny" },
+    { "action": "shell", "resource": "truncate table*", "effect": "deny" },
+    { "action": "shell", "resource": "format c:*", "effect": "deny" }
+  ],
+  "default_agent": "loop-free",
+  "model": "opencode/mimo-v2.6-flash-free",
+  "agents": {
+    "title": { "model": "opencode/mimo-v2.6-flash-free" },
+    "build": {
+      "permissions": [
+        { "action": "external_directory", "resource": "*", "effect": "allow" },
+        { "action": "read", "resource": "*.env", "effect": "allow" },
+        { "action": "read", "resource": "*.env.*", "effect": "allow" }
+      ]
+    }
+  },
+  "compaction": {
+    "auto": true,
+    "keep": { "tokens": 20000 },
+    "buffer": 60000
+  },
+  "tool_output": {
+    "max_lines": 300,
+    "max_bytes": 12000
+  }
+}

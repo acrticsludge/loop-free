@@ -1,0 +1,32 @@
+{
+  "name": "loop-free",
+  "version": "0.1.0",
+  "description": "Setup a full free-tier loop-engine (loop-free) stack under OpenCode: agent files + loop controller + sanitized MCP config + doctor to surface missing tools.",
+  "type": "module",
+  "bin": {
+    "loop-free": "bin/loop-free.js"
+  },
+  "scripts": {
+    "install": "node src/install.js",
+    "doctor": "node src/doctor.js",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "files": [
+    "bin",
+    "src",
+    "tests",
+    "templates",
+    "manifest.json",
+    "README.md",
+    ".env.example"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {},
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/acrticsludge/loop-free.git"
+  }
+}

@@ -1,0 +1,636 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>loop control</title>
+<style>
+/* ── palette ─────────────────────────────────────────────────────────────
+   Neutrals share one hue so surfaces read as a family, not as random greys.
+   Accents are reserved strictly for state; chrome is tinted, never coloured. */
+:root{
+  --n0:#080a0f; --n1:#0d1017; --n2:#131822; --n3:#1a2029;
+  --n4:#232b37; --line:#2a3340; --line-soft:#1f2732;
+  --fg:#e8edf4; --fg-2:#a3b0c2; --fg-3:#6b7889;
+  --ok:#3fcf7a; --warn:#e3b341; --bad:#f4695f; --info:#5aa9f5; --accent:#a98bf5;
+  --ok-bg:rgba(63,207,122,.11); --warn-bg:rgba(227,179,65,.11);
+  --bad-bg:rgba(244,105,95,.11); --info-bg:rgba(90,169,245,.11);
+  --chrome:#0a0d13;
+  --r:12px; --r-sm:8px;
+  --mono:ui-monospace,SFMono-Regular,"SF Mono",Menlo,Consolas,monospace;
+  --sans:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,sans-serif;
+  --ease:cubic-bezier(.2,.7,.3,1);
+}
+@media (prefers-color-scheme:light){
+  :root{
+    --n0:#f4f6f9; --n1:#fff; --n2:#fff; --n3:#f7f9fb; --n4:#eef1f5;
+    --line:#dce2ea; --line-soft:#e9edf2;
+    --fg:#111721; --fg-2:#4d596a; --fg-3:#7d8798;
+    --ok:#128a4e; --warn:#8a6100; --bad:#c8342a; --info:#0b64c4; --accent:#6b3fc4;
+    --ok-bg:rgba(18,138,78,.09); --warn-bg:rgba(138,97,0,.09);
+    --bad-bg:rgba(200,52,42,.09); --info-bg:rgba(11,100,196,.09);
+    --chrome:#e7ebf0;
+  }
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{
+  margin:0;background:var(--n0);color:var(--fg);
+  font:14px/1.55 var(--sans);
+  -webkit-font-smoothing:antialiased;
+  transition:background .3s var(--ease);
+}
+::-webkit-scrollbar{width:10px;height:10px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--n4);border-radius:99px;border:3px solid transparent;background-clip:content-box}
+::-webkit-scrollbar-thumb:hover{background:var(--fg-3);background-clip:content-box}
+
+/* ── chrome: window bar + tabs ───────────────────────────────────────── */
+.chrome{
+  position:sticky;top:0;z-index:40;background:var(--chrome);
+  border-bottom:1px solid var(--line);
+  box-shadow:0 1px 0 rgba(0,0,0,.25),0 8px 24px -18px rgba(0,0,0,.6);
+}
+.titlebar{
+  display:flex;align-items:center;gap:10px;padding:9px 14px 0;
+  font-size:11.5px;color:var(--fg-3);
+}
+.lights{display:flex;gap:6px;flex:none}
+.light{width:10px;height:10px;border-radius:50%;background:var(--n4)}
+.light.r{background:#ff5f57}.light.y{background:#febc2e}.light.g{background:#28c840}
+@media (prefers-color-scheme:light){.light{background:#c8cfd8}.light.r{background:#ff5f57}.light.y{background:#febc2e}.light.g{background:#28c840}}
+.titlebar .wt{font-weight:600;color:var(--fg-2);letter-spacing:.01em}
+.titlebar .sp{flex:1}
+.pill-live{
+  display:inline-flex;align-items:center;gap:6px;padding:2px 9px;border-radius:99px;
+  background:var(--ok-bg);color:var(--ok);font-weight:600;font-size:10.5px;
+  letter-spacing:.04em;text-transform:uppercase;
+}
+.pill-live.off{background:var(--n3);color:var(--fg-3)}
+
+.tabrow{display:flex;align-items:flex-end;gap:3px;padding:0 10px;overflow-x:auto;scrollbar-width:none}
+.tabrow::-webkit-scrollbar{display:none}
+.tab{
+  position:relative;flex:none;display:flex;align-items:center;gap:8px;
+  padding:9px 15px 10px;min-height:36px;cursor:pointer;
+  color:var(--fg-3);font-size:13px;font-weight:500;white-space:nowrap;
+  background:transparent;border:1px solid transparent;border-bottom:none;
+  border-radius:10px 10px 0 0;
+  transition:color .18s var(--ease),background .18s var(--ease);
+}
+.tab:hover{color:var(--fg-2);background:rgba(125,135,152,.09)}
+.tab.on{
+  color:var(--fg);font-weight:600;background:var(--n1);
+  border-color:var(--line);
+  animation:tabPop .22s var(--ease);
+}
+@keyframes tabPop{from{transform:translateY(4px);opacity:.6}to{transform:none;opacity:1}}
+.tab.on::after{
+  content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--n1);
+}
+.tab .dot{width:7px;height:7px;border-radius:50%;background:var(--fg-3);flex:none;transition:background .2s}
+.dot.ok{background:var(--ok)}.dot.warn{background:var(--warn)}
+.dot.bad{background:var(--bad)}.dot.info{background:var(--info)}
+.tab .cnt{
+  font-size:10px;font-weight:700;padding:1px 6px;border-radius:99px;
+  background:var(--n4);color:var(--fg-2);
+}
+.subtabs{display:flex;gap:2px;padding:0 12px 6px;overflow-x:auto;scrollbar-width:none}
+.subtabs::-webkit-scrollbar{display:none}
+.subtab{
+  position:relative;flex:none;display:flex;align-items:center;gap:7px;
+  padding:5px 12px;border-radius:7px;cursor:pointer;font-size:12px;
+  color:var(--fg-3);border:1px solid transparent;
+  transition:color .16s var(--ease),background .16s var(--ease);
+}
+.subtab:hover{color:var(--fg-2);background:rgba(125,135,152,.08)}
+.subtab.on{color:var(--fg);background:var(--n3);border-color:var(--line);font-weight:600}
+.subtab.dead{opacity:.5}
+
+main{max-width:1220px;margin:0 auto;padding:20px 20px 60px;animation:fade .3s var(--ease)}
+@keyframes fade{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+
+/* ── hero ────────────────────────────────────────────────────────────── */
+.hero{
+  border:1px solid var(--line);border-radius:var(--r);padding:18px 20px;margin-bottom:16px;
+  background:var(--n1);position:relative;overflow:hidden;
+  transition:background .35s var(--ease),border-color .35s var(--ease);
+}
+.hero::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--fg-3);transition:background .35s var(--ease)}
+.hero.ok{background:linear-gradient(180deg,var(--ok-bg),transparent 70%),var(--n1)}
+.hero.ok::before{background:var(--ok)}
+.hero.warn{background:linear-gradient(180deg,var(--warn-bg),transparent 70%),var(--n1)}
+.hero.warn::before{background:var(--warn)}
+.hero.bad{background:linear-gradient(180deg,var(--bad-bg),transparent 70%),var(--n1)}
+.hero.bad::before{background:var(--bad)}
+.hero.bad{animation:alarm 2.6s ease-in-out infinite}
+@keyframes alarm{0%,100%{border-color:var(--line)}50%{border-color:var(--bad)}}
+.hero.info{background:linear-gradient(180deg,var(--info-bg),transparent 70%),var(--n1)}
+.hero.info::before{background:var(--info)}
+.hero h1{margin:0 0 5px;font-size:21px;font-weight:680;letter-spacing:-.015em;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.hero p{margin:0;color:var(--fg-2);font-size:13.5px;max-width:74ch}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-top:12px}
+.tag{
+  display:inline-flex;align-items:center;gap:5px;padding:3px 10px;border-radius:99px;
+  font-size:11px;font-weight:600;background:var(--n3);color:var(--fg-2);border:1px solid var(--line);
+}
+.tag.ok{background:var(--ok-bg);color:var(--ok);border-color:transparent}
+.tag.warn{background:var(--warn-bg);color:var(--warn);border-color:transparent}
+.tag.bad{background:var(--bad-bg);color:var(--bad);border-color:transparent}
+.tag.info{background:var(--info-bg);color:var(--info);border-color:transparent}
+.tag.acc{background:color-mix(in srgb,var(--accent) 14%,transparent);color:var(--accent);border-color:transparent}
+.tag.mono{font-family:var(--mono);font-weight:500}
+
+/* ── pipeline stepper ────────────────────────────────────────────────── */
+.stepper{
+  display:grid;grid-template-columns:repeat(12,1fr);gap:5px;margin-bottom:16px;
+}
+@media (max-width:900px){.stepper{grid-template-columns:repeat(6,1fr)}}
+@media (max-width:560px){.stepper{grid-template-columns:repeat(3,1fr)}}
+.step{
+  position:relative;background:var(--n1);border:1px solid var(--line);
+  border-radius:var(--r-sm);padding:9px 8px 10px;min-height:64px;
+  display:flex;flex-direction:column;gap:2px;justify-content:center;
+  transition:transform .18s var(--ease),border-color .18s var(--ease),background .18s var(--ease);
+}
+.step:hover{transform:translateY(-2px)}
+.step .idx{font-size:9.5px;font-weight:700;color:var(--fg-3);letter-spacing:.09em}
+.step .nm{font-size:10.5px;font-weight:700;letter-spacing:.02em;line-height:1.25;color:var(--fg-2)}
+.step .vl{font-size:11.5px;font-weight:600;margin-top:2px}
+.step.pass{background:linear-gradient(180deg,var(--ok-bg),transparent),var(--n1);border-color:color-mix(in srgb,var(--ok) 34%,var(--line))}
+.step.pass .vl{color:var(--ok)}
+.step.fail{background:linear-gradient(180deg,var(--bad-bg),transparent),var(--n1);border-color:color-mix(in srgb,var(--bad) 40%,var(--line))}
+.step.fail .vl{color:var(--bad)}
+.step.stale{background:linear-gradient(180deg,var(--warn-bg),transparent),var(--n1);border-color:color-mix(in srgb,var(--warn) 34%,var(--line))}
+.step.stale .vl{color:var(--warn)}
+.step.blocked{background:linear-gradient(180deg,var(--bad-bg),transparent),var(--n1);border-color:var(--bad)}
+.step.blocked .vl{color:var(--bad)}
+.step.run{background:linear-gradient(180deg,var(--info-bg),transparent),var(--n1);border-color:color-mix(in srgb,var(--info) 40%,var(--line))}
+.step.run .vl{color:var(--info)}
+.step.run::after{
+  content:"";position:absolute;top:8px;right:8px;width:6px;height:6px;border-radius:50%;
+  background:var(--info);animation:pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:1;transform:scale(1)}50%{opacity:.25;transform:scale(.7)}}
+.step.skip{opacity:.5}
+.step.optional{opacity:.62;border-style:dashed}
+.step.optional::before{
+  content:"";position:absolute;top:0;left:8px;width:14px;height:2px;
+  background:var(--fg-3);opacity:.6;
+}
+.step.na{opacity:.34}
+.step .note{
+  font-size:9.5px;color:var(--fg-3);margin-top:2px;line-height:1.3;
+  overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;
+}
+
+/* ── cards ───────────────────────────────────────────────────────────── */
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px;align-items:start}
+.card{
+  background:var(--n1);border:1px solid var(--line);border-radius:var(--r);
+  padding:15px 16px;margin-bottom:16px;
+}
+.card>h3{
+  margin:0 0 12px;font-size:11px;font-weight:700;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--fg-3);display:flex;align-items:center;gap:8px;
+}
+.card>h3 .n{margin-left:auto;font-weight:600;letter-spacing:0;text-transform:none;font-size:11px}
+.row{display:flex;justify-content:space-between;gap:14px;padding:7px 0;border-bottom:1px solid var(--line-soft);align-items:flex-start}
+.row:last-child{border-bottom:none}
+.row .k{color:var(--fg-3);font-size:12px;white-space:nowrap;flex:none}
+.row .v{text-align:right;font-size:12.5px;word-break:break-word;min-width:0;flex:1}
+.mono{font-family:var(--mono);font-size:11.5px}
+
+.todo{display:flex;gap:10px;padding:7px 8px;align-items:flex-start;font-size:13px;border-radius:7px;transition:background .18s var(--ease)}
+.todo:hover{background:var(--n3)}
+.todo .m{flex:none;width:15px;text-align:center;color:var(--fg-3);font-size:12px;line-height:1.5}
+.todo.in_progress{background:var(--info-bg);box-shadow:inset 2px 0 0 var(--info)}
+.todo.in_progress .m{color:var(--info)}
+.todo.completed{color:var(--fg-3)}
+.todo.completed .tx{text-decoration:line-through}
+.todo.cancelled{color:var(--fg-3);opacity:.6}
+.todo.cancelled .tx{text-decoration:line-through}
+.todo .p{margin-left:auto;font-size:9.5px;color:var(--fg-3);text-transform:uppercase;letter-spacing:.05em;flex:none;padding-top:2px}
+
+.feed{max-height:460px;overflow-y:auto;margin:0 -6px;padding:0 6px}
+.ev{display:flex;gap:10px;padding:6px 0;font-size:12.5px;border-bottom:1px solid var(--line-soft);align-items:flex-start;animation:slide .28s var(--ease)}
+@keyframes slide{from{opacity:0;transform:translateX(-6px)}to{opacity:1;transform:none}}
+.ev:last-child{border-bottom:none}
+.ev .k{flex:none;width:66px;font-family:var(--mono);font-size:9.5px;font-weight:600;letter-spacing:.05em;color:var(--fg-3);text-transform:uppercase;padding-top:3px}
+.ev .x{min-width:0;word-break:break-word;flex:1}
+.ev .t{flex:none;color:var(--fg-3);font-size:10px;font-family:var(--mono);padding-top:3px}
+.ev.ok .k{color:var(--ok)}.ev.bad .k{color:var(--bad)}
+.ev.warn .k{color:var(--warn)}.ev.info .k{color:var(--info)}
+
+button{
+  background:var(--n3);color:var(--fg);border:1px solid var(--line);
+  border-radius:8px;padding:7px 15px;font:inherit;font-size:12.5px;font-weight:600;cursor:pointer;
+  transition:background .16s var(--ease),border-color .16s var(--ease),transform .1s var(--ease);
+}
+button:hover:not(:disabled){background:var(--n4);border-color:var(--fg-3)}
+button:active:not(:disabled){transform:translateY(1px)}
+button:disabled{opacity:.45;cursor:not-allowed}
+button:focus-visible,input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.narr{margin-top:12px;padding:13px 15px;background:var(--n3);border-radius:10px;font-size:13.5px;line-height:1.6;white-space:pre-wrap;border:1px solid var(--line-soft)}
+.narr.err{border-color:var(--bad);color:var(--bad);background:var(--bad-bg)}
+.muted{color:var(--fg-3);font-size:12px;line-height:1.6}
+.empty{text-align:center;padding:90px 24px;color:var(--fg-3)}
+.empty h2{color:var(--fg);font-size:19px;font-weight:650;margin:0 0 8px}
+.forbidden{list-style:none;padding:0;margin:8px 0 0}
+.forbidden li{font-size:12.5px;padding:6px 0 6px 20px;border-bottom:1px solid var(--line-soft);position:relative;color:var(--fg-2)}
+.forbidden li:last-child{border-bottom:none}
+.forbidden li::before{content:"⛔";position:absolute;left:0;top:6px;font-size:11px}
+.switch{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:10px}
+.switch button{font-size:12px;padding:5px 12px}
+.switch button.on{background:var(--info-bg);color:var(--info);border-color:color-mix(in srgb,var(--info) 40%,var(--line))}
+
+.offline{
+  position:fixed;right:16px;bottom:16px;z-index:60;display:flex;align-items:center;gap:8px;
+  background:var(--bad);color:#fff;padding:9px 15px;border-radius:99px;font-size:12.5px;font-weight:600;
+  box-shadow:0 8px 24px -8px rgba(0,0,0,.5);animation:slide .3s var(--ease);
+}
+.offline::before{content:"";width:7px;height:7px;border-radius:50%;background:#fff;animation:pulse 1.2s infinite}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;animation-iteration-count:1!important;transition-duration:.001ms!important}
+}
+</style>
+</head>
+<body>
+
+<div class="chrome">
+  <div class="titlebar">
+    <span class="lights"><i class="light r"></i><i class="light y"></i><i class="light g"></i></span>
+    <span class="wt" id="wt">loop control</span>
+    <span class="sp"></span>
+    <span id="pub" class="muted mono"></span>
+    <span id="sess"></span>
+  </div>
+  <div class="tabrow" id="repos"></div>
+  <div class="subtabs" id="subs"></div>
+</div>
+
+<main id="main"></main>
+
+<script>
+"use strict";
+const $ = (s, r) => (r || document).querySelector(s);
+const el = (t, a, kids) => {
+  const n = document.createElement(t);
+  for (const k in a || {}) {
+    const v = a[k];
+    if (v == null) continue;
+    if (k === "class") n.className = v;
+    else if (k === "text") n.textContent = v;
+    else if (k === "html") n.innerHTML = v;
+    else if (k.startsWith("on")) n.addEventListener(k.slice(2), v);
+    else n.setAttribute(k, v);
+  }
+  for (const c of [].concat(kids || [])) if (c) n.appendChild(c);
+  return n;
+};
+const ago = (t) => {
+  if (!t) return "never";
+  const s = Math.max(0, Math.round((Date.now() - t) / 1000));
+  if (s < 60) return s + "s ago";
+  if (s < 3600) return Math.round(s / 60) + "m ago";
+  if (s < 86400) return Math.round(s / 3600) + "h ago";
+  return Math.round(s / 86400) + "d ago";
+};
+const when = (t) => (t ? new Date(t).toLocaleString() : "unknown");
+const clock = (t) => (t ? new Date(t).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }) : "");
+
+let SNAP = { repos: [], narrateEnabled: false };
+let sel = { repo: null, sid: null };
+let lastSig = "";
+
+const STAGES = [
+  { n: 0,  nm: "ORIENT",      sub: "discover" },
+  { n: 1,  nm: "DEFINE",      sub: "requirements" },
+  { n: 2,  nm: "ARCHITECT",   sub: "shape" },
+  { n: 3,  nm: "PLAN",        sub: "break down" },
+  { n: 4,  nm: "IMPLEMENT",   sub: "build" },
+  { n: 5,  nm: "VERIFY",      sub: "gates" },
+  { n: "5b", nm: "VISUAL",    sub: "paint" },
+  { n: 6,  nm: "HARDEN",      sub: "security" },
+  { n: 7,  nm: "REVIEW",      sub: "adversarial" },
+  { n: 8,  nm: "PRODUCE",     sub: "release-ready" },
+  { n: 9,  nm: "SHIP",        sub: "commit" },
+  { n: 10, nm: "REPORT",      sub: "handoff" },
+];
+
+const all = () => { const o = []; for (const r of SNAP.repos || []) for (const s of r.sessions || []) o.push({ r, s }); return o; };
+const cur = () => { const a = all(); if (!a.length) return null; return a.find((x) => x.r.repoHash === sel.repo && x.s.sid === sel.sid) || a[0]; };
+const pick = (h, sid) => { sel.repo = h; sel.sid = sid; lastSig = ""; render(); };
+
+function gateState(g, lastEditAt) {
+  if (!g) return "notrun";
+  if (g.state === "pass") return g.at > lastEditAt ? "pass" : "stale";
+  if (g.state === "fail") return "fail";
+  return "notrun";
+}
+const GL = { pass: "PASS", stale: "STALE", fail: "FAIL", notrun: "NOT RUN" };
+const GC = { pass: "ok", stale: "warn", fail: "bad", notrun: "" };
+
+function stageModel(s) {
+  const st = s.stages || {};
+  const g = (n) => st[String(n)] || {};
+  const code = gateState(s.gates && s.gates.code, s.lastEditAt);
+  const visReq = s.visualRequired;
+  const vis = visReq ? gateState(s.gates && s.gates.visual, s.lastEditAt) : "na";
+  const wCode = (s.waivers || []).some((w) => w.gate === "code");
+  const wVis = (s.waivers || []).some((w) => w.gate === "visual");
+  const nodes = [...new Set(((s.events || []).filter((e) => e.k === "node").map((e) => e.role)))];
+  const active = [...(s.events || [])].reverse().find((e) => e.k === "node");
+  const vEv = [...(s.events || [])].reverse().find((e) => e.k === "verdict" && ["ship", "fix", "block"].includes(e.value));
+  const codeOk = code === "pass" || wCode;
+  const visOk = !visReq || vis === "pass" || wVis;
+
+  const rows = STAGES.map((d) => {
+    const r = g(d.n);
+    let cls = "skip", vl = r.state ? r.state.toUpperCase() : "PENDING", note = r.note || "";
+    if (r.state === "pass") { cls = "pass"; vl = "PASS"; }
+    else if (r.state === "fail") { cls = "fail"; vl = "FAIL"; }
+    else if (r.state === "blocked") { cls = "blocked"; vl = "BLOCKED"; }
+    else if (r.state === "enter") { cls = "run"; vl = "RUNNING"; }
+    else if (r.state === "skip") { cls = "skip"; vl = "SKIPPED"; }
+    else if (r.state === "note") { cls = ""; vl = "NOTED"; }
+    else { cls = "skip"; vl = "PENDING"; }
+    if (d.n === 5) { cls = wCode ? "skip" : (code === "notrun" ? "skip" : code); vl = wCode ? "WAIVED" : GL[code]; note = (s.gates.code && s.gates.code.command) || note; }
+    if (d.n === "5b") { cls = !visReq ? "na" : (wVis ? "skip" : vis); vl = !visReq ? "N/A" : wVis ? "WAIVED" : GL[vis]; }
+    if (d.n === 4 && !r.state && active) { cls = "run"; vl = "RUNNING"; note = active.role + (active.rung ? " · rung " + active.rung : ""); }
+    if (d.n === 7 && vEv) { cls = vEv.value === "ship" ? "pass" : "fail"; vl = vEv.value.toUpperCase(); }
+    if (d.n === 10 && vEv && vEv.value === "ship" && codeOk && visOk) { cls = "pass"; vl = "READY"; }
+    return { ...d, cls, vl, note, skills: r.skills || [], mand: d.n === "5b" ? visReq : (s.adapter?.mandatoryStages ?? []).includes(d.n) };
+  });
+  return { rows, nodes };
+}
+
+function evLine(e) {
+  const T = {
+    gate: () => [`${e.gate} gate → ${String(e.state).toUpperCase()}  ${e.cmd || ""}`, e.state === "pass" ? "ok" : e.state === "fail" ? "bad" : "warn"],
+    node: () => [`${e.role}${e.rung ? " (rung " + e.rung + ")" : ""}${e.desc ? " — " + e.desc : ""}`, "info"],
+    edit: () => [`${e.path}${e.test ? "  [test]" : ""}${e.ui ? "  [ui]" : ""}`, ""],
+    cheat: () => [`BLOCKED test weakening in ${e.path}`, "bad"],
+    deny: () => [`denied: ${e.reason}`, "bad"],
+    waiver: () => [`waiver ${e.gate}: ${e.reason}`, "warn"],
+    limit: () => [`${e.cls} rate limit${e.resetAt ? " · resets " + new Date(e.resetAt).toLocaleTimeString() : " · reset time unknown"}`, e.cls === "usage" ? "bad" : "warn"],
+    stage: () => [`stage ${e.stage} ${e.verb}${e.refused ? " — " + e.refused : ""}${e.note ? " — " + e.note : ""}${e.skills && e.skills.length ? " [" + e.skills.join(", ") + "]" : ""}`, e.verb === "pass" ? "ok" : e.verb === "fail" || e.verb === "blocked" ? "bad" : e.verb === "enter" ? "info" : ""],
+    todo: () => [`todos updated (${(e.todos || []).length})`, ""],
+    mcp: () => [`mcp tool: ${e.tool}`, "info"],
+    verdict: () => [`verdict: ${e.value}`, e.value === "ship" ? "ok" : "bad"],
+    "session-end": () => ["session ended", "warn"],
+  };
+  const f = T[e.k];
+  if (!f) return null;
+  const [txt, tone] = f();
+  return el("div", { class: "ev " + tone }, [
+    el("span", { class: "k", text: e.k }),
+    el("span", { class: "x", text: txt }),
+    el("span", { class: "t", text: clock(e.t) }),
+  ]);
+}
+
+function card(title, n, kids) {
+  return el("div", { class: "card" }, [
+    el("h3", {}, [document.createTextNode(title), n != null ? el("span", { class: "n", text: String(n) }) : null]),
+  ].concat([].concat(kids || [])));
+}
+function row(k, v) {
+  const val = typeof v === "string" || typeof v === "number" ? el("span", { text: String(v) }) : v;
+  return el("div", { class: "row" }, [el("div", { class: "k", text: k }), el("div", { class: "v" }, [val])]);
+}
+function pill(t, c) { return el("span", { class: "tag " + (c || ""), text: t }); }
+function txt(s, cls) { return el("span", { class: cls || "", text: s }); }
+
+function render(force) {
+  const c = cur();
+  $("#wt").textContent = c ? `${c.r.repoName} — loop control` : "loop control";
+  const live = all().filter((x) => x.s.alive).length;
+  $("#sess").replaceChildren(el("span", { class: "pill-live" + (live ? "" : " off"), text: live ? live + " live" : "no live runs" }));
+  const pub = $("#pub");
+  if (SNAP.publicUrl && !pub.firstChild) {
+    pub.replaceChildren(document.createTextNode(SNAP.publicUrl.replace(/^https:\/\//, "")));
+    pub.style.cursor = "pointer";
+    pub.title = "click to copy the public link (needs your token appended)";
+    pub.onclick = () => {
+      const t = document.cookie.match(/(?:^|;\s*)lp=([^;]+)/);
+      const full = SNAP.publicUrl + "/?t=" + (t ? decodeURIComponent(t[1]) : "");
+      navigator.clipboard?.writeText(full);
+      pub.textContent = "copied";
+      setTimeout(() => { pub.textContent = SNAP.publicUrl.replace(/^https:\/\//, "") }, 1200);
+    };
+  }
+
+  const repos = $("#repos");
+  repos.replaceChildren();
+  for (const r of SNAP.repos || []) {
+    const on = c && r.repoHash === c.r.repoHash;
+    const worst = r.sessions.some((x) => x.status.tone === "bad") ? "bad" : r.sessions.some((x) => x.status.tone === "warn") ? "warn" : r.sessions.some((x) => x.alive) ? "info" : "muted";
+    repos.appendChild(el("div", { class: "tab" + (on ? " on" : ""), onclick: () => pick(r.repoHash, r.sessions[0].sid) }, [
+      el("span", { class: "dot " + worst }),
+      document.createTextNode(r.repoName),
+      r.sessions.length > 1 ? el("span", { class: "cnt", text: String(r.sessions.length) }) : null,
+    ]));
+  }
+  const subs = $("#subs");
+  subs.replaceChildren();
+  for (const s of (c ? c.r.sessions : []) || []) {
+    subs.appendChild(el("div", {
+      class: "subtab" + (c && s.sid === c.s.sid ? " on" : "") + (s.alive ? "" : " dead"),
+      title: "started " + when(s.startedAt) + " · " + s.sid,
+      onclick: () => pick(c.r.repoHash, s.sid),
+    }, [
+      el("span", { class: "dot " + (s.status.tone || "muted") }),
+      document.createTextNode(s.sid.slice(0, 12)),
+      el("span", { class: "muted", text: ago(s.lastEventAt) }),
+    ]));
+  }
+
+  const sig = JSON.stringify([
+    SNAP.repos && SNAP.repos.length, c && c.s.sid, c && c.s.lastEventAt,
+    c && c.s.status && c.s.status.state, c && c.s.stages, c && c.s.gates,
+    c && c.s.adapter, c && c.r && c.r.adapters && c.r.adapters.active,
+    c && c.s.mcp, SNAP.narrateEnabled, c && c.s.narr && c.s.narr.at,
+  ]);
+  if (!force && sig === lastSig) return;
+  lastSig = sig;
+
+  const main = $("#main");
+  main.replaceChildren();
+
+  if (!c) {
+    main.appendChild(el("div", { class: "empty" }, [
+      el("h2", { text: "No loop sessions" }),
+      el("div", { text: "This page comes alive when a loop starts. The portal stops itself 15 seconds after the last session ends." }),
+    ]));
+    return;
+  }
+  const s = c.s, a = s.adapter || {};
+
+  main.appendChild(el("div", { class: "hero " + (s.status.tone || "muted") }, [
+    el("h1", {}, [
+      document.createTextNode(s.status.headline || "unknown"),
+      s.alive ? pill("LIVE", "ok") : pill("STOPPED"),
+    ]),
+    el("p", { text: s.status.detail || "" }),
+    el("div", { class: "tags" }, [
+      pill(a.name || "generic", a.source === "repo" ? "acc" : "warn"),
+      a.source === "fallback" ? pill("no project rules", "warn") : null,
+      pill("risk floor: " + (s.riskFloor || "medium"), s.riskFloor === "high" ? "bad" : s.riskFloor === "medium" ? "warn" : "ok"),
+      s.riskDeclared ? pill("declared: " + s.riskDeclared) : null,
+      ...(s.riskCats || []).map((x) => pill(x, "bad")),
+      pill("adapter: " + (a.source === "repo" ? "repo" : "fallback")),
+    ]),
+  ]));
+
+  const sm = stageModel(s);
+  const step = el("div", { class: "stepper" });
+  for (const r of sm.rows) {
+    step.appendChild(el("div", {
+      class: "step " + r.cls + (r.mand ? "" : " optional"),
+      title: (r.mand ? "required by adapter" : "optional under this adapter") + " — " + r.vl + (r.note ? " — " + r.note : ""),
+    }, [
+      el("div", { class: "idx", text: r.sub + (r.mand ? "" : " ·") }),
+      el("div", { class: "nm", text: r.nm }),
+      el("div", { class: "vl", text: r.vl }),
+      r.note ? el("div", { class: "note", text: r.note }) : null,
+    ]));
+  }
+  main.appendChild(step);
+
+  const left = el("div"), right = el("div");
+
+  const wCodePill = pill("WAIVED", "info");
+  const wVisPill = pill("WAIVED", "info");
+  const hasWCode = (s.waivers || []).some((w) => w.gate === "code");
+  const hasWVis = (s.waivers || []).some((w) => w.gate === "visual");
+  left.appendChild(card("gates", null, [
+    row("code", el("span", {}, [hasWCode ? wCodePill : pill(GL[gateState(s.gates && s.gates.code, s.lastEditAt)], GC[gateState(s.gates && s.gates.code, s.lastEditAt)]), txt(" " + ((s.gates && s.gates.code && s.gates.code.command) || ""), "mono")])),
+    row("visual", s.visualRequired
+      ? el("span", {}, [hasWVis ? wVisPill : pill(GL[gateState(s.gates && s.gates.visual, s.lastEditAt)], GC[gateState(s.gates && s.gates.visual, s.lastEditAt)]), txt(" " + ((s.gates && s.gates.visual && s.gates.visual.command) || ""), "mono")])
+      : el("span", {}, [pill("N/A"), txt(" no UI files touched", "muted")])),
+    row("tests touched", (s.testEdits && s.testEdits.length) ? s.testEdits.join(", ") : "none"),
+    row("last edit", when(s.lastEditAt)),
+  ]));
+
+  const todos = s.todos || [];
+  const tk = todos.length ? todos.map((t) => el("div", { class: "todo " + t.s }, [
+    el("span", { class: "m", text: t.s === "completed" ? "✔" : t.s === "in_progress" ? "▸" : t.s === "cancelled" ? "✕" : "○" }),
+    el("span", { class: "tx", text: t.c }),
+    t.p ? el("span", { class: "p", text: t.p }) : null,
+  ])) : [el("div", { class: "muted", text: "No todo list reported yet. The orchestrator declares stages with loopstage and posts todos as it plans." })];
+  left.appendChild(card("todo", todos.length ? todos.filter((t) => t.s === "completed").length + "/" + todos.length : null, tk));
+
+  const spec = [...new Set(s.specialists || [])];
+  left.appendChild(card("specialists", spec.length || null, spec.length
+    ? spec.map((x) => row(x.split("-").map((w) => w[0].toUpperCase() + w.slice(1)).join(" "), pill("activated", "info")))
+    : [el("div", { class: "muted", text: "None reported. Stages announce activated specialists with loopstage --verb skills." })]));
+
+  const mcpEntries = Object.entries(s.mcp || {}).sort((x, y) => y[1].count - x[1].count);
+  left.appendChild(card("mcp tools", mcpEntries.length || null, mcpEntries.length
+    ? mcpEntries.map(([k, v]) => row(k, el("span", {}, [pill(String(v.count) + "x", "info"), txt("  " + ago(v.at), "muted")])))
+    : [el("div", { class: "muted", text: "No MCP tool calls yet. These are observed by the plugin rather than self-reported, so this list cannot be inflated by the model claiming it used a tool." })]));
+
+  {
+    const ad = c.r.adapters || { list: [] };
+    const rules = Array.isArray(a.forbidden) ? a.forbidden : [];
+    const multi = !!(ad.list && ad.list.length > 1);
+    if (multi || rules.length) {
+      const head = [];
+      if (multi) {
+        const desc = (x) => {
+          if (x.active) return "currently active"
+          const bits = []
+          if (x.riskFloor) bits.push("floor " + x.riskFloor)
+          if (typeof x.ruleCount === "number") bits.push(x.ruleCount + " rule" + (x.ruleCount === 1 ? "" : "s"))
+          if (x.visualRequired === "never") bits.push("no visual gate")
+          else if (x.visualRequired === "always") bits.push("visual gate always")
+          return bits.length ? "switch to — " + bits.join(", ") : "switch to this adapter"
+        }
+        head.push(el("div", { class: "switch" }, ad.list.map((x) =>
+          el("button", {
+            class: x.active ? "on" : "",
+            text: x.name,
+            title: desc(x),
+            onclick: async () => {
+              if (x.active) return;
+              try {
+                await fetch("/api/adapter", {
+                  method: "POST", headers: { "Content-Type": "application/json" },
+                  body: JSON.stringify({ repo: c.r.repo, name: x.name }),
+                });
+              } catch {}
+              render(true);
+            },
+          }))));
+        head.push(el("div", { class: "muted", text: "Switching takes effect within a couple of seconds. No opencode restart. The rules listed below are the ones this run is currently bound to; the plugin records the new adapter on its next event." }));
+      }
+      const body = [];
+      if (rules.length) {
+        body.push(el("ul", { class: "forbidden" }, rules.map((f) => el("li", { text: f }))));
+      } else {
+        body.push(el("div", { class: "muted", text: "This adapter declares no forbidden rules. That is a weaker guardrail set than a project that pins them — treat it as a downgrade, not a clean bill of health." }));
+      }
+      right.appendChild(card("adapter rules — " + a.name, rules.length, head.concat(body)));
+    }
+  }
+
+  const iss = [];
+  for (const l of (s.limits || []).slice().reverse())
+    iss.push(row(l.cls === "usage" ? "usage limit" : "transient", el("span", {}, [pill(l.cls === "usage" ? "HALT" : "RETRY", l.cls === "usage" ? "bad" : "warn"), txt(" " + (l.resetAt ? "resets " + new Date(l.resetAt).toLocaleString() : "reset time unknown"), "muted")])));
+  for (const d of (s.denials || []).slice().reverse()) iss.push(row("denied", el("span", {}, [pill("BLOCK", "bad"), txt(" " + d.reason, "mono")])));
+  for (const w of (s.waivers || []).slice().reverse()) iss.push(row("waiver", el("span", {}, [pill("WAIVED", "info"), txt(" " + w.gate + ": " + w.reason)])));
+  if (iss.length) right.appendChild(card("issues", iss.length, iss));
+
+  const nar = [];
+  if (SNAP.narrateEnabled) {
+    const btn = el("button", { text: s.narrState === "busy" ? "narrating…" : "generate summary", disabled: s.narrState === "busy" ? "true" : null, onclick: async () => { btn.disabled = true; btn.textContent = "narrating…"; try { await fetch("/api/narrate", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ repoHash: c.r.repoHash, sid: s.sid }) }); } catch {} } });
+    nar.push(btn);
+  } else {
+    nar.push(el("div", { class: "muted", text: "Narration is off. It spawns a model process on this machine, so it stays disabled unless the daemon starts with LOOP_PORTAL_NARRATE=1. Everything else here works without it." }));
+  }
+  if (s.narr && s.narr.error) nar.push(el("div", { class: "narr err", text: "narrator unavailable — " + s.narr.error }));
+  else if (s.narr && s.narr.text) nar.push(el("div", { class: "narr", text: s.narr.text }));
+  right.appendChild(card("summary", null, nar));
+
+  const feed = el("div", { class: "feed" });
+  let n = 0;
+  for (const e of (s.events || []).slice().reverse()) { const l = evLine(e); if (l) { feed.appendChild(l); if (++n >= 180) break; } }
+  if (!n) feed.appendChild(el("div", { class: "muted", text: "No events yet." }));
+  right.appendChild(card("event stream", n, [feed]));
+
+  const grid = el("div", { class: "grid" }, [left, right]);
+  grid.style.gridTemplateColumns = "repeat(auto-fit,minmax(340px,1fr))";
+  main.appendChild(grid);
+}
+
+let es = null, off = false;
+function connect() {
+  if (es) es.close();
+  es = new EventSource("/api/stream");
+  es.onmessage = (m) => {
+    try {
+      SNAP = JSON.parse(m.data);
+      if (off) { const o = document.querySelector(".offline"); if (o) o.remove(); }
+      off = false;
+      if (!sel.repo) { const a = all()[0]; if (a) { sel.repo = a.r.repoHash; sel.sid = a.s.sid; } }
+      render();
+    } catch (e) {
+      const o = document.querySelector(".rendererr") || el("div", { class: "offline rendererr", text: "render error" });
+      o.textContent = "render error: " + e.message;
+      if (!o.parentNode) document.body.appendChild(o);
+    }
+  };
+  es.onerror = () => {
+    if (off) return;
+    off = true;
+    if (!document.querySelector(".offline:not(.rendererr)")) document.body.appendChild(el("div", { class: "offline", text: "disconnected — reconnecting" }));
+  };
+}
+fetch("/api/runs").then((r) => (r.ok ? r.json() : null)).then((j) => { if (j) { SNAP = j; const a = all()[0]; if (a) { sel.repo = a.r.repoHash; sel.sid = a.s.sid; } render(true); } }).catch(() => {});
+connect();
+setInterval(() => render(true), 5000);
+</script>
+</body>
+</html>
