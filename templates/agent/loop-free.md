@@ -374,6 +374,27 @@ tool with a short (≤ 60 chars) title summarising the current task, e.g. "fix: 
 Skip when running in a read-only run or when the session title was already explicitly set to the task you're about to perform.
 Do not move sessions between directories with `opencode.session_move` unless files/tooling force it.
 
+### Backend connectors (conditional, use only when the declared radius touches them)
+
+Do not install or wire every connector. Add only what the project actually uses,
+and use Context7 (`context7.get-docs`) for sdk/API details. Keep connection strings
+and keys in your own `.env`/secret manager, never in templates or commits.
+
+- **PostgreSQL**
+  - Use the project’s ORM/driver (`pg`, `psycopg`, `Prisma`, `Django ORM`). Prefer pool tuning and bounded connections; validate migrations up/down. Indexes and keys must be migration-led, not ad-hoc. Run integration tests against a local/CI database.
+- **Neon (serverless Postgres)**
+  - Use pooling, low connect timeout, minimal per-request connections. Test branch/personal-database flows and never leak credentials.
+- **Supabase**
+  - Use Supabase Auth/RLS/policies as source of truth. Prove RLS with tests and store anon/service keys only via env.
+- **Upstash**
+  - Use `@upstash/*` SDK mainly for Redis / QStash / serverless persistence. Use installed `upstash/*` skills only when present, and never hard-depend on missing skills.
+- **Dodo Payments**
+  Treat API key as high-risk secret. The declared radius must include only low-risk paths while planning; verify webhook signatures, idempotency, and Checkout state transitions before release.
+
+When present, these high-risk systems require the same cleanup as any
+`schema`, `payment`, `auth`, `secret`, or `infra` change and must be staged
+with explicit path selection, tests, and never leak tokens in logs/diffs.
+
 ## Frontend vs Backend specialization (mandatory)
 
 Classify the task at stage 0 and apply the matching constraints for every node
