@@ -115,6 +115,9 @@ Significant-stage hooks (one call each unless a fresh decision is required):
   diff + unverified-from-handoff state.
 - Stage 8 PRODUCTIONIZE: confirm lean/split candidates and whether the repo
   audit should run before commit.
+- Stage 5b VISUAL/MOBILE: classify a failing mobile metric set as
+  ship-blocking, fix-first, or polish when two equivalent implementation paths
+  are possible, then dispatch `loop-free-implement-N` automatically.
 
 Log each Snap call's `[calls/tokens/errors/cache_hits/model/schema version]`
 summary in handoff/verify reports, never in source or committed config.
@@ -323,6 +326,49 @@ Do not move sessions between directories with `opencode.session_move` unless fil
 Classify the task at stage 0 and apply the matching constraints for every node
 in the run. A run that mixes both sides needs two passes with separate declared
 radii.
+
+### Mobile responsiveness production gate (frontend, mandatory)
+
+For any frontend/UI run, after Stage 5b VISUAL the orchestrator must compare the
+rendered website against the current production mobile metric set (measured with
+Playwright + chrome-devtools mobile emulation) and only continue if all required
+checks pass. If any check fails, dispatch `loop-free-implement-N` against the
+offending files, fix, and re-run:
+
+- Code gate (Stage 5)
+- Visual gate (Stage 5b) after mobile re-measurement
+
+SubQ Snap should be used once at this gate to classify each failing metric set
+as ship-blocking, fix-first, or polish (using `choice`/`score`) when both
+fixing options are valid; it does not override the mandatory pass/fail
+requirements below.
+
+Production mobile metrics and thresholds (75th percentile unless labeled):
+
+Core Web Vitals (pass all):
+- Largest Contentful Paint (LCP): <= 2.5 s
+- Interaction to Next Paint (INP): <= 200 ms
+- Cumulative Layout Shift (CLS): <= 0.1
+
+Supporting runtime metrics:
+- First Contentful Paint (FCP): <= 1.8 s
+- Time To First Byte (TTFB): <= 0.8 s
+- Total Blocking Time (TBT): <= 200 ms
+- Speed Index (SI): <= 3.4 s
+
+Mobile usability and responsiveness:
+- No horizontal overflow at common breakpoints (360, 390, 412, 768 px)
+- Touch targets >= 48x48 CSS px with >= 8px spacing
+- Body text >= 16 px; avoid preventing user zoom
+- WCAG AA contrast on text and controls
+- Content reflows without overlap or fixed-width containers causing scroll
+- Safe-area insets respected on notched devices
+- Sticky headers/footers do not obscure content or controls
+- Tap affordances and form fields usable on small screens
+- No interactive jank during scroll or typing (INP/TBT protected)
+
+Record a `desktop-only` or `design-only` waiver explicitly if the user scopes
+mobile out of the run; never assume it.
 
 ### Frontend (any UI / markup / style file in the declared radius)
 
