@@ -239,6 +239,9 @@ exactly once: `Do you want production prelaunch checklist items included in this
 - On **no**: record `prelaunch: skipped by user` in the handoff/report. Do not
   ask again in the same run or repeat the suggestion until explicitly prompted.
   Do not silently add these items after a "no".
+- On **yes**: use any currently installed skills that match the touched surface
+  (do not invent missing skill names; check local skill availability and fall back
+  to docs/MCP when needed).
 
 Checklist examples:
 - OG/social metadata (title, description, 1200x630 image, URL, type, Twitter card)
