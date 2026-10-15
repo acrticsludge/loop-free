@@ -257,6 +257,59 @@ Checklist examples:
 - consent-aware analytics
 - required legal pages
 
+## Git + docs first (always on, multi-session safe)
+
+Use repository state and versioned documents before broad scans, web lookups,
+or repeating discovery. This is the default memory system.
+
+Stage 0 ORIENT:
+- Record the current repository edge first: branch, `HEAD`, dirty status, and a short
+  baseline using `git status --short` and `git diff --stat`. Do not mutate or
+  remove another agent's changes just to get a clean tree.
+- If the repo is already dirty, scope your changes to unrelated files, and record
+  the baseline as `mixed-tree` in the handoff. If a file is both user-owned and
+  agent-needed, stop and ask before overwriting.
+- Read the small durable docs before searching elsewhere: `README.md`,
+  `AGENTS.md`, project `CLAUDE.md`, `DESIGN.md`, `docs/ARCHITECTURE.md`,
+  `docs/COMPONENT_INDEX.md`, latest ADRs, relevant spec/plan, and handoff.
+- Query `nova-memory` with `project=<repoRoot>`, then merge only summaries relevant to
+  the task into the handoff. Tag stored facts as `project=<repoRoot>` and `memory_type=context`.
+- Materialize one concise repo map in the handoff: entry points, modules,
+  routes/components, tests covering them, and commands used. Reuse it for later
+  stages instead of re-reading unchanged files.
+- Track a `RUN_ID` derived from the session directory plus a timestamp and include
+  it in every note, report, handoff update, and artifact filename. Never overwrite
+  another agent's handoff; append or create a dated file and use explicit paths.
+- Use Git commands as evidence only: `git log -- <path>`, `git blame`, changed-line
+  ranges, and commit messages. Do not treat history alone as architecture; combine
+  it with docs and tests.
+- Load installed skills before inventing a pattern. Prefer the one canonical example
+  over repeated exploration.
+- Prefer the local repo over fresh web searches for known constraints. Re-search the web
+  only for API/version/release truth that is not already captured.
+
+Stages 4 through 7:
+- Derive the edit baseline from the recorded HEAD and use `git diff` against it for review.
+- Reuse unchanged files from the handoff instead of rereading them.
+- Keep each implementer's radius to the handoff files plus explicitly declared additions.
+- Stage 7 must compare the diff to both tests and docs, not only source code.
+
+Stage 8 PRODUCTIONIZE:
+- Write the final change summary, metrics/gate evidence, and any new invariant to:
+  `docs/reports/<slug>-handoff.md` or the adapter's docs root.
+- Append or create a dated ADR/decision note when a reusable convention changed.
+- Update `docs/ARCHITECTURE.md` and `docs/COMPONENT_INDEX.md` (or explanatory `DESIGN.md`)
+  when new routes, components, models, or ownership boundaries were added.
+- Store a short verified outcome in `nova-memory` with commit SHA (or tree digest)
+  and the `RUN_ID`. Do not store secrets, commands that include secrets, or unverified
+  long-form logs.
+- If two agents completed work, reconcile reports by branch/artifact before commit;
+  never delete user-owned docs or context. If conflicts cannot be reconciled safely,
+  stop and report.
+
+Do not replace this with ad-hoc web lookup unless the required answer is not present
+in repo files, git state, or docs.
+
 ## Reporting
 
 Quote reviewers'/HARDEN's own findings. End with skipped-or-not-checked plus risks.
