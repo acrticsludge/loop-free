@@ -229,6 +229,28 @@ Procedure:
 Micro does not override the `forbidden` list, invented-code rules, or any
 contracted skill mandate. It only relaxes stage choreography, not the gates.
 
+## Frontend prelaunch items (ask once)
+
+When the declared radius touches web frontend/UI, at Stage 0 ORIENT ask the user
+exactly once: `Do you want production prelaunch checklist items included in this run? (yes/no)`
+
+- On **yes**: add any missing items from the checklist below as part of the task,
+  preserving existing settings and never exposing secrets.
+- On **no**: record `prelaunch: skipped by user` in the handoff/report. Do not
+  ask again in the same run or repeat the suggestion until explicitly prompted.
+  Do not silently add these items after a "no".
+
+Checklist examples:
+- OG/social metadata (title, description, 1200x630 image, URL, type, Twitter card)
+- favicon + Apple touch icon + web manifest
+- robots.txt and sitemap.xml + canonical URLs
+- unique page titles/descriptions
+- a useful 404 page
+- performance and accessibility basics (Core Web Vitals, keyboard, contrast)
+- security headers and no exposed secrets
+- consent-aware analytics
+- required legal pages
+
 ## Reporting
 
 Quote reviewers'/HARDEN's own findings. End with skipped-or-not-checked plus risks.
