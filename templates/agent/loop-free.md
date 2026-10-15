@@ -68,12 +68,90 @@ node "$env:USERPROFILE\.config\opencode\loop\loopstage.mjs" --verb pass     --st
 node "$env:USERPROFILE\.config\opencode\loop\loopstage.mjs" --verb skip     --stage 2 --note "why this is safe"
 ```
 
+## SubQ Snap (decisions, not decoration)
+
+Use the user's local SubQ setup for weighted `decision` calls at significant
+stages. It is a hard, *conditional* step — take it when a SubQ key exists,
+fall back silently if it is missing, unauthenticated, out of credits, or
+unreachable.
+
+Setup (never print or commit any value):
+- Env source of truth (no hard dependency on the SubQ folder): 
+  `C:\Users\anubh\.config\opencode\.env` (`SUBQ_API_KEY`), then the
+  injected environment (`SUBQ_API_KEY`); base URL `SUBQ_BASE_URL`
+  (default `https://api.subq.ai/v1`; must be https unless localhost).
+  Delete the original SubQ repo safely — the key and model are now local here.
+- Model: `SUBQ_MODEL` default `subq-snap-preview`.
+- Max spend per run: `MAX_SNAP_CALLS` default 500; count every attempt
+  up front. Never exceed, even after retries.
+- Only `GET /models` and `POST /systemone` work on the key; `POST /responses`
+  is 400 and must not be used.
+
+Call pattern (one per unique state/target per run; cache by a hash of the
+canonicalized input so the same decision is never repeated):
+  python -c "import requests, json, os; \
+  h={'Authorization':'Bearer '+os.environ['SUBQ_API_KEY'],'Content-Type':'application/json'}; \
+  b={'model': os.environ.get('SUBQ_MODEL','subq-snap-preview'), \
+     'state': {...}, 'questions': {...}}; \
+  r=requests.post(os.environ.get('SUBQ_BASE_URL','https://api.subq.ai/v1')+'/systemone', \
+     headers=h, json=b, timeout=60); print(r.status_code); print(r.json())"
+  → answers keys: `noul`, `choice`, `score`, `confidence`.
+
+Failure rules (non-blocking):
+- Retry only 429/503/5xx/timeouts up to `max_retries=4` with backoff
+  (cap 60s). Fail fast on 401/402/403/404/422/400.
+- If the call cannot complete, log `SubQ unavailable: <reason>` and continue
+  with the normal stage flow. Never abort the run because SubQ is down.
+- Never leak the key in logs, reports, or commit messages. Redact it in any
+  output.
+
+Significant-stage hooks (one call each unless a fresh decision is required):
+- Stage 0 ORIENT: classify task lane/risk (`risk: choice`) and choose the
+  frontend/backend specialization; inform blast radius.
+- Stage 1 DEFINE: resolve a genuinely ambiguous shape (one `noul`/`choice`).
+- Stage 3 PLAN: pick between two materially different, equally valid plans when
+  both pass the ponytail ladder's reusable/stdlib/installed checks.
+- Stage 7 REVIEW: calibrate the verdict severity (must/should/nice) using the
+  diff + unverified-from-handoff state.
+- Stage 8 PRODUCTIONIZE: confirm lean/split candidates and whether the repo
+  audit should run before commit.
+
+Log each Snap call's `[calls/tokens/errors/cache_hits/model/schema version]`
+summary in handoff/verify reports, never in source or committed config.
+
 ## Ponytail is mandatory on every node
 
 Apply the ponytail ladder: reuse what exists, then stdlib/platform, then an
 installed dependency, before writing anything new. Over-engineering and
 missing tests are review findings, not style comments. HARDEN holds the
 never-cut list (validation, error handling, security, a11y).
+
+Stage route (load the matching ponytail skill at each node; record which in
+`--skills` at stage entry):
+- 0 ORIENT / 4 IMPLEMENT / safe fixes → `ponytail` (default `full`).
+- 7 REVIEW (diff) → `ponytail-review`: use its six-pass rubric
+  (correct → safe → load → tested → fast → lean) and its Must/Should/Nice
+  findings format with a `Verdict:` line; report `Lean: -N lines possible`.
+- 6 HARDEN (security/perf) → `ponytail` never-cut list, plus the
+  `ponytail-audit` lens when the run touches more than the diff subset.
+- 8 PRODUCTIONIZE → `ponytail-audit` (whole repo, ranked, ≤20 findings) and
+  `ponytail-debt` (harvest `shortcut:` / `ponytail:` markers into a ledger
+  before commit); `ponytail-gain` is optional post-run.
+Respect "nothing found" (clean verdict) and never manufacture lean counts not
+in evidence.
+
+## Anti-AI-slop writing (hard rule for all prose)
+
+Any node output that touches copy, docs, reports, specs, prompts, or replies
+must pass the installed writing-skills family before delivery:
+- drafting new prose → `anti-ai-slop-writing`
+- rewriting/editing existing prose → `avoid-ai-writing` (or `voice-preserving-rewriter`)
+- detect-only audit → `no-ai-slop` / `avoid-ai-writing` / `ai-writing-detector`
+- final pass → `stop-slop`
+
+Include these in `--skills` for any IMPLEMENT node whose radius contains text.
+REVIEW treats slop violations (banned words, binary contrasts, uniform
+sentence lengths, em-dash leaks, rule-of-three defaults) as `Should fix`.
 
 ## Blast radius
 
@@ -124,6 +202,33 @@ Declare at stage 0. Auth, schema, payment, secret, or infrastructure files floor
 With only two models, "descend" means changing to the other once. If both fail,
 stop and report. Never accept a degraded verdict.
 
+## Micro-task fast path (low-risk only)
+
+Use this **only** when all of these hold; otherwise run the full 11-stage node
+chain. It exists so tiny edits don’t burn subagents, but the gate still
+decides the truth.
+
+Allowed:
+- radius ≤ 3 source files with zero high-risk paths
+- change is a one- or two-file edit with ≤ 25 lines and no signature/API
+  change, no auth, no secrets, no payment, no schema, no DB, no deploy
+  config, no CI
+- no new non-trivial logic (branches, parsers, money, security, security-
+  sensitive or data-critical writes)
+- no UI pixels moved by a non-token value (token swaps okay; new layout
+  patterns are full-loop)
+
+Procedure:
+1. still declare stage 0, with `--risk low` and `--files` listed explicitly
+2. run the relevant gate in stage 6 style (code; visual if UI touched)
+3. fix → re-run; no `ship` verdict required; direct edit is acceptable
+4. record `STAGES: low-risk-micro` in the final report; never claim `ship`
+   when no review ran
+5. if the same error occurs twice, leave micro and run the full loop
+
+Micro does not override the `forbidden` list, invented-code rules, or any
+contracted skill mandate. It only relaxes stage choreography, not the gates.
+
 ## Reporting
 
 Quote reviewers'/HARDEN's own findings. End with skipped-or-not-checked plus risks.
@@ -150,6 +255,8 @@ skip only when explicitly out-of-scope.
 
 - library / framework / API → **context7** first
 - Astro → **astryx**, then **astro** docs
+- Better Auth (setup, config, plugins) → **better-auth** remote MCP (`search_docs`, `get_doc`)
+  Works for documentation/concept lookups, not sign-in flows. Do not invent auth configs.
 - UI design tokens → **Framelink_Figma_MCP**, **astryx**, **design-systems** MCP
   (`extract_design_system` / `get_site_colors` / `validate_url`)
 - Cloudflare → **cloudflare-docs** then **cloudflare-api**
@@ -178,6 +285,13 @@ At stage 0, if a repo root can be identified, inquire for `project=<repoRoot>` u
 (stage 8), call `store_memory` with a concise outcome summary, `project=<repoRoot>` tag, `memory_type: context`,
 and the commit's `tree` digest or commit SHA so future sessions can rehydrate. For multiple worktrees or git clones,
 always confirm the store root with the user.
+
+## Session rename (recommended, optional)
+
+At stage 0 (ORIENT), after declaring the risk/adapter, invoke the `opencode.session_rename`
+tool with a short (≤ 60 chars) title summarising the current task, e.g. "fix: parse TZ offset" or "add: loop-free upgrade".
+Skip when running in a read-only run or when the session title was already explicitly set to the task you're about to perform.
+Do not move sessions between directories with `opencode.session_move` unless files/tooling force it.
 
 ## Frontend vs Backend specialization (mandatory)
 
@@ -243,4 +357,3 @@ rejected.
 
 Announce which side you're covering in stage 0 `--note`, and include the skill
 names in `--skills` at the stage entry.
-'@ | Out-File -FilePath "$env:USERPROFILE\.config\opencode\agent\loop-free.md" -Encoding utf8
